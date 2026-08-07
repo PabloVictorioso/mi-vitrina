@@ -152,14 +152,16 @@
   .filterbar select option{background:#241609; color:var(--cream);}
   .filterbar.hidden{display:none;}
 
-  /* ---- Sin finalizar: vidrio quebrado ---- */
-  .card.unfinished{border-color:rgba(255,255,255,.14);}
+  /* ---- Sin finalizar: vidrio destrozado ---- */
+  .card.unfinished{border-color:rgba(255,255,255,.22);}
+  .card.unfinished img, .card.unfinished .no-img{filter:blur(1.3px) saturate(.55) brightness(.9);}
   .card.unfinished::after{
     content:""; position:absolute; inset:0; z-index:2; pointer-events:none; border-radius:inherit;
     background:
-      linear-gradient(115deg, transparent 40%, rgba(255,255,255,.08) 46%, transparent 55%),
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300' preserveAspectRatio='none'><g fill='none' stroke='white'><g stroke-width='1.4' stroke-opacity='0.34'><path d='M95,80 L58,50 L18,12'/><path d='M95,80 L122,42 L146,6'/><path d='M95,80 L48,104 L4,118'/><path d='M95,80 L136,120 L178,148'/><path d='M95,80 L82,142 L58,196'/></g><g stroke-width='0.7' stroke-opacity='0.26'><path d='M74,68 L86,56 L102,58'/><path d='M70,94 L84,106 L100,101'/><path d='M112,74 L118,88 L112,102'/><path d='M58,50 L52,68'/><path d='M122,42 L136,50'/></g><g stroke-width='1.1' stroke-opacity='0.28'><path d='M215,225 L254,206 L295,182'/><path d='M215,225 L228,262 L238,296'/><path d='M215,225 L176,254 L136,278'/><path d='M215,225 L262,258'/></g><g stroke-width='0.6' stroke-opacity='0.22'><path d='M201,214 L208,231 L226,238'/><path d='M230,214 L238,228'/><path d='M254,206 L250,224'/></g></g></svg>");
-    background-size:cover, 100% 100%;
+      linear-gradient(115deg, transparent 28%, rgba(255,255,255,.18) 44%, transparent 62%),
+      linear-gradient(0deg, rgba(255,255,255,.07), rgba(255,255,255,.07)),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300' preserveAspectRatio='none'><defs><g id='c' fill='none'><path d='M80,70 L137,52 L184,37 L248,30 L293,11'/><path d='M80,70 L141,104 L206,118 L263,147 L298,181'/><path d='M80,70 L100,130 L114,191 L131,261 L149,298'/><path d='M80,70 L71,148 L58,219 L65,287 L51,298'/><path d='M80,70 L34,96 L2,115 L2,145 L2,169'/><path d='M80,70 L16,61 L2,50 L2,37 L2,28'/><path d='M80,70 L14,28 L2,2 L2,2 L2,2'/><path d='M80,70 L69,34 L50,2 L38,2 L23,2'/><path d='M80,70 L97,35 L98,2 L105,2 L110,2'/><path d='M80,70 L117,41 L172,7 L212,2 L249,2'/><path d='M92,69 L94,76'/><path d='M94,76 L85,83'/><path d='M85,83 L78,88'/><path d='M68,82 L65,69'/><path d='M63,61 L78,53'/><path d='M83,54 L95,62'/><path d='M120,60 L112,82'/><path d='M112,82 L90,105'/><path d='M90,105 L73,110'/><path d='M73,110 L48,90'/><path d='M48,90 L39,64'/><path d='M39,64 L51,49'/><path d='M51,49 L68,35'/><path d='M68,35 L87,32'/><path d='M87,32 L113,44'/><path d='M113,44 L120,60'/><path d='M142,52 L136,101'/><path d='M136,101 L96,130'/><path d='M96,130 L75,132'/><path d='M27,105 L14,56'/><path d='M23,32 L59,5'/><path d='M59,5 L91,7'/><path d='M91,7 L131,29'/><path d='M131,29 L142,52'/><path d='M174,44 L174,114'/><path d='M174,114 L111,167'/><path d='M111,167 L65,166'/><path d='M65,166 L-1,122'/><path d='M-1,122 L-17,54'/><path d='M-5,16 L43,-26'/><path d='M43,-26 L100,-32'/><path d='M159,2 L174,44'/><path d='M228,150 L265,148 L297,149 L298,158 L298,160'/><path d='M228,150 L281,185 L298,233 L298,262 L298,292'/><path d='M228,150 L229,213 L249,275 L250,298 L258,298'/><path d='M228,150 L221,185 L206,219 L190,241 L169,271'/><path d='M228,150 L169,175 L111,205 L40,219 L2,244'/><path d='M228,150 L172,139 L127,124 L57,119 L14,121'/><path d='M228,150 L205,125 L185,85 L176,69 L146,43'/><path d='M228,150 L235,90 L234,42 L241,2 L246,2'/><path d='M228,150 L263,110 L298,87 L298,54 L298,15'/><path d='M242,147 L235,159'/><path d='M221,161 L214,153'/><path d='M214,153 L214,144'/><path d='M214,144 L221,138'/><path d='M221,138 L229,136'/><path d='M229,136 L234,144'/><path d='M234,144 L242,147'/><path d='M264,149 L255,171'/><path d='M255,171 L231,188'/><path d='M231,188 L213,183'/><path d='M213,183 L197,160'/><path d='M197,160 L197,144'/><path d='M197,144 L212,125'/><path d='M212,125 L229,118'/><path d='M254,125 L264,149'/><path d='M289,147 L275,189'/><path d='M275,189 L238,208'/><path d='M238,208 L205,203'/><path d='M205,203 L173,171'/><path d='M173,171 L166,138'/><path d='M166,138 L193,102'/><path d='M193,102 L234,93'/><path d='M234,93 L275,109'/><path d='M275,109 L289,147'/><path d='M110,248 L176,245 L237,233 L296,238 L298,225'/><path d='M110,248 L140,280 L164,298 L208,298 L229,298'/><path d='M110,248 L104,298 L109,298 L116,298 L108,298'/><path d='M110,248 L62,276 L15,298 L2,298 L2,298'/><path d='M110,248 L84,247 L46,236 L15,218 L2,208'/><path d='M110,248 L84,217 L59,172 L38,134 L10,115'/><path d='M110,248 L103,196 L101,129 L99,70 L96,8'/><path d='M110,248 L141,215 L160,172 L186,126 L223,82'/><path d='M124,250 L115,257'/><path d='M115,257 L111,263'/><path d='M111,263 L101,254'/><path d='M101,254 L93,244'/><path d='M93,244 L101,233'/><path d='M101,233 L110,229'/><path d='M110,229 L120,236'/><path d='M120,236 L124,250'/><path d='M147,243 L130,277'/><path d='M108,287 L83,268'/><path d='M83,268 L78,242'/><path d='M78,242 L91,220'/><path d='M91,220 L109,210'/><path d='M109,210 L126,219'/><path d='M126,219 L147,243'/><path d='M170,246 L152,296'/><path d='M152,296 L115,312'/><path d='M115,312 L64,282'/><path d='M64,282 L47,231'/><path d='M47,231 L75,198'/><path d='M107,185 L146,198'/><path d='M146,198 L170,246'/></g></defs><g fill='white' fill-opacity='0.10'><polygon points='92,69 94,76 112,82 120,60'/><polygon points='85,83 78,88 73,110 90,105'/><polygon points='48,90 39,64 14,56 27,105'/><polygon points='23,32 59,5 43,-26 -5,16'/><polygon points='91,7 131,29 159,2 100,-32'/><polygon points='264,149 255,171 275,189 289,147'/><polygon points='231,188 213,183 205,203 238,208'/><polygon points='214,153 214,144 197,144 197,160'/><polygon points='221,138 229,136 229,118 212,125'/><polygon points='234,144 242,147 264,149 254,125'/><polygon points='124,250 115,257 130,277 147,243'/><polygon points='111,263 101,254 83,268 108,287'/><polygon points='93,244 101,233 91,220 78,242'/><polygon points='109,210 126,219 146,198 107,185'/></g><use href='%23c' stroke='black' stroke-opacity='0.45' stroke-width='4'/><use href='%23c' stroke='white' stroke-opacity='0.9' stroke-width='1.7'/><circle cx='80' cy='70' r='4.5' fill='white' fill-opacity='0.95'/><circle cx='80' cy='70' r='9' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='1.6'/><circle cx='228' cy='150' r='4.5' fill='white' fill-opacity='0.95'/><circle cx='228' cy='150' r='9' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='1.6'/><circle cx='110' cy='248' r='4.5' fill='white' fill-opacity='0.95'/><circle cx='110' cy='248' r='9' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='1.6'/></svg>");
+    background-size:cover, cover, 100% 100%;
   }
 
   /* ================= Dock inferior ================= */
@@ -312,6 +314,17 @@
   .overlay.gate .close-x{display:none;}
   .overlay.gate{background:rgba(8,4,1,.9);}
 
+  /* contador de jugados (meta 100) */
+  .counter{
+    position:fixed; left:22px; bottom:22px; z-index:58; width:58px; height:58px; border-radius:50%;
+    background:rgba(18,10,4,.88); backdrop-filter:blur(12px); border:1px solid rgba(233,199,117,.35);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .counter .n{font-family:Georgia,serif; font-size:1.2rem; color:var(--gold); line-height:1;}
+  .counter .g{font-size:.52rem; color:var(--soft); letter-spacing:.1em; margin-top:3px;}
+  .counter.hidden{display:none;}
+
   #toast{
     position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(16px);
     background:rgba(30,18,8,.96); color:var(--cream);
@@ -340,6 +353,10 @@
       <option value="rel-desc">Estreno · recientes primero</option>
       <option value="rel-asc">Estreno · antiguos primero</option>
     </select>
+    <select id="filterJewel">
+      <option value="">Todos los juegos</option>
+      <option value="joya">Solo joyas</option>
+    </select>
   </div>
 
   <section class="view active" id="view-played">
@@ -361,6 +378,10 @@
   <button id="btnImport">Importar respaldo</button>
   <div class="note">Tu colección vive en este navegador. Exporta un respaldo de vez en cuando.</div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
+</div>
+
+<div class="counter" id="playedCounter" title="Juegos jugados — meta: 100">
+  <span class="n">0</span><span class="g">DE 100</span>
 </div>
 
 <nav class="dock">
@@ -423,7 +444,7 @@
       <label>Estado</label>
       <div class="seg">
         <label><input type="radio" name="fState" value="quiero">Próximo</label>
-        <label><input type="radio" name="fState" value="jugando" checked>Jugando</label>
+        <label><input type="radio" name="fState" value="jugando" checked>Jugado</label>
         <label><input type="radio" name="fState" value="terminado">Finalizado</label>
       </div>
     </div>
@@ -501,8 +522,8 @@ function toast(msg){
 function openOv(id){ $("#"+id).classList.add("open"); }
 function closeOv(id){ $("#"+id).classList.remove("open"); }
 $$("[data-close]").forEach(b => b.addEventListener("click", ()=>closeOv(b.dataset.close)));
-$$(".overlay").forEach(ov => ov.addEventListener("click", e => { if(e.target === ov && !ov.classList.contains("gate")) ov.classList.remove("open"); }));
-document.addEventListener("keydown", e => { if(e.key === "Escape"){ $$(".overlay.open:not(.gate)").forEach(o=>o.classList.remove("open")); $("#menu").classList.remove("open"); } });
+$$(".overlay").forEach(ov => ov.addEventListener("click", e => { if(e.target === ov && !ov.classList.contains("gate") && ov.id !== "ovForm") ov.classList.remove("open"); }));
+document.addEventListener("keydown", e => { if(e.key === "Escape"){ $$(".overlay.open:not(.gate)").forEach(o=>{ if(o.id !== "ovForm") o.classList.remove("open"); }); $("#menu").classList.remove("open"); } });
 
 /* ---------- Datos (con migración desde v1) ---------- */
 let db = load();
@@ -543,6 +564,7 @@ $$(".dock button[data-view]").forEach(btn => btn.addEventListener("click", ()=>{
   $$("section.view").forEach(v=>v.classList.remove("active"));
   $("#view-" + btn.dataset.view).classList.add("active");
   $("#filterbar").classList.toggle("hidden", btn.dataset.view === "top10");
+  $("#playedCounter").classList.toggle("hidden", btn.dataset.view !== "played");
   $("#menu").classList.remove("open");
 }));
 $("#btnMore").addEventListener("click", e=>{ e.stopPropagation(); $("#menu").classList.toggle("open"); });
@@ -559,6 +581,10 @@ function quieroGames(){ return db.games.filter(g => g.state === "quiero"); }
 /* ---- Filtros superiores ---- */
 $("#filterGenre").addEventListener("change", renderGalleries);
 $("#sortBy").addEventListener("change", renderGalleries);
+$("#filterJewel").addEventListener("change", ()=>{
+  if($("#filterJewel").value === "joya") $("#sortBy").value = "rel-desc"; // joyas: de reciente a antigua
+  renderGalleries();
+});
 function currentSort(){ return $("#sortBy").value; }
 function refreshGenreFilter(){
   const sel = $("#filterGenre"); const cur = sel.value;
@@ -569,6 +595,7 @@ function refreshGenreFilter(){
 function decorate(list){
   const genre = $("#filterGenre").value;
   let out = genre ? list.filter(g=>g.genre===genre) : [...list];
+  if($("#filterJewel").value === "joya") out = out.filter(g=>g.jewel);
   const sort = currentSort();
   if(sort !== "manual"){
     const key = g => g.released || (g.year ? g.year + "-06-30" : "");
@@ -626,6 +653,7 @@ function renderGalleries(){
   refreshGenreFilter();
   renderInto("#gridPlayed", decorate(playedGames()), "Sin juegos con este filtro. Pulsa + para agregar.");
   renderInto("#gridQuiero", decorate(quieroGames()), "Sin próximos juegos con este filtro.");
+  $("#playedCounter").querySelector(".n").textContent = playedGames().length;
 }
 
 /* ============================================================
@@ -642,9 +670,10 @@ function openDetail(id){
   const rows = [];
   const rel = fmtDate(g.released) || (g.year ?? null);
   if(rel) rows.push(["Salida", esc(rel)]);
-  const stateTxt = g.state === "terminado" ? ("Finalizado" + (g.yearFinished ? " · " + g.yearFinished : ""))
-                 : g.state === "jugando" ? "Jugando" : "Próximo";
+  const stateTxt = g.state === "terminado" ? "Finalizado"
+                 : g.state === "jugando" ? "Jugado · sin finalizar" : "Próximo";
   rows.push(["Estado", esc(stateTxt)]);
+  if(g.state === "terminado" && g.yearFinished) rows.push(["Finalizado en", esc(g.yearFinished)]);
   if(g.metacritic != null) rows.push(["Metacritic", `<span class="chip mc ${mcClass(g.metacritic)}">${esc(g.metacritic)}</span>`]);
   if(g.personal != null) rows.push(["Mi puntaje", `<span class="chip me">${esc(g.personal)}</span>`]);
   if(g.jewel) rows.push(["", `<span class="chip jewel-tag">Joya</span>`]);
