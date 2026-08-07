@@ -308,6 +308,10 @@
   .pick .p-meta{font-size:.72rem; color:var(--soft);}
   .pick .p-rank{margin-left:auto; font-size:.7rem; color:var(--amber); flex-shrink:0;}
 
+  /* pantalla de entrada obligatoria */
+  .overlay.gate .close-x{display:none;}
+  .overlay.gate{background:rgba(8,4,1,.9);}
+
   #toast{
     position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(16px);
     background:rgba(30,18,8,.96); color:var(--cream);
@@ -497,8 +501,8 @@ function toast(msg){
 function openOv(id){ $("#"+id).classList.add("open"); }
 function closeOv(id){ $("#"+id).classList.remove("open"); }
 $$("[data-close]").forEach(b => b.addEventListener("click", ()=>closeOv(b.dataset.close)));
-$$(".overlay").forEach(ov => ov.addEventListener("click", e => { if(e.target === ov) ov.classList.remove("open"); }));
-document.addEventListener("keydown", e => { if(e.key === "Escape"){ $$(".overlay.open").forEach(o=>o.classList.remove("open")); $("#menu").classList.remove("open"); } });
+$$(".overlay").forEach(ov => ov.addEventListener("click", e => { if(e.target === ov && !ov.classList.contains("gate")) ov.classList.remove("open"); }));
+document.addEventListener("keydown", e => { if(e.key === "Escape"){ $$(".overlay.open:not(.gate)").forEach(o=>o.classList.remove("open")); $("#menu").classList.remove("open"); } });
 
 /* ---------- Datos (con migración desde v1) ---------- */
 let db = load();
@@ -866,7 +870,19 @@ function setCloudUser(u){
   const prev = cloudUser?.id;
   cloudUser = u;
   renderAuthUI();
+  updateGate();
   if(u && u.id !== prev) pullCloud();
+}
+/* Al abrir: si hay Supabase configurado y no hay sesión, exige entrar.
+   La sesión se recuerda sola en el navegador; solo vuelve a pedirla tras Cerrar sesión. */
+function updateGate(){
+  const ov = $("#ovAuth");
+  if(sb && !cloudUser){
+    ov.classList.add("open", "gate");
+  }else{
+    ov.classList.remove("gate");
+    if(cloudUser) ov.classList.remove("open");
+  }
 }
 function renderAuthUI(){
   $("#authLogged").style.display = cloudUser ? "block" : "none";
@@ -924,7 +940,7 @@ $("#btnLogin").addEventListener("click", async ()=>{
   else { $("#authMsg").textContent = ""; closeOv("ovAuth"); toast("Sesión iniciada"); }
 });
 $("#btnLogout").addEventListener("click", async ()=>{
-  await sb.auth.signOut(); closeOv("ovAuth"); toast("Sesión cerrada");
+  await sb.auth.signOut(); toast("Sesión cerrada"); updateGate();
 });
 
 /* ---------- App instalable (PWA) ---------- */
