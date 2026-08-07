@@ -851,8 +851,8 @@ $("#importFile").addEventListener("change", e=>{
    NUBE — Supabase (cuentas y sincronización)
    Pega aquí los dos valores de tu proyecto (Project Settings → API)
    ============================================================ */
-const SUPABASE_URL = "PEGA_AQUI_TU_PROJECT_URL";
-const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_ANON_PUBLIC_KEY";
+const SUPABASE_URL = "https://wubsqbfpqiseddjmfxyv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_pC9-5EqsSIrpJqITyXmvfQ_gh2f2W4_";
 
 let sb = null, cloudUser = null, syncTimer = null;
 function cloudConfigured(){ return SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20; }
