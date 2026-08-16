@@ -8,7 +8,6 @@
 <meta name="theme-color" content="#241609">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='8' y='8' width='48' height='48' rx='10' fill='%23d9a441'/><rect x='16' y='16' width='32' height='32' rx='6' fill='%23241609'/></svg>">
 <style>
-  @property --ja { syntax:'<angle>'; initial-value:0deg; inherits:false; }
   :root{
     --wood-1:#2a1a0c; --wood-2:#37220f; --wood-3:#1e1207;
     --card:#191007;
@@ -18,6 +17,7 @@
     --line:rgba(233,199,117,.14);
     --danger:#c0563e;
     --radius:14px;
+    --glass:none;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
@@ -25,13 +25,18 @@
     font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
     color:var(--cream);
     min-height:100vh;
+    background:var(--wood-1);
+  }
+  /* Fondo de madera en una capa fija propia: se pinta una sola vez y no se
+     vuelve a dibujar al hacer scroll (antes usaba background-attachment:fixed). */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.35 0.012' numOctaves='4' seed='11'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.5 0.22 0.08 0 0'/></filter><rect width='420' height='420' filter='url(%23g)' opacity='0.45'/></svg>"),
       repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 2px, transparent 2px 118px),
       repeating-linear-gradient(0deg, transparent 0 24px, rgba(255,200,120,.02) 24px 48px, transparent 48px 118px),
       radial-gradient(120% 90% at 50% 0%, rgba(255,205,130,.10), transparent 55%),
       linear-gradient(180deg, var(--wood-2) 0%, var(--wood-1) 55%, var(--wood-3) 100%);
-    background-attachment:fixed;
   }
   ::selection{background:var(--amber); color:#22150a;}
 
@@ -61,10 +66,10 @@
     position:absolute; left:0; right:0; bottom:0; z-index:3; padding:34px 12px 10px;
     background:linear-gradient(180deg, transparent, rgba(8,4,1,.88));
     font-size:.85rem; font-weight:600; letter-spacing:.01em;
-    opacity:0; transform:translateY(6px); transition:all .25s ease; pointer-events:none;
+    opacity:0; transform:translateY(6px); transition:opacity .25s ease, transform .25s ease; pointer-events:none;
   }
   .card:hover .name-ol{opacity:1; transform:none;}
-  .badges{position:absolute; top:9px; right:9px; display:flex; flex-direction:column; gap:5px; align-items:flex-end; z-index:3;}
+  .badges{position:absolute; top:9px; right:9px; display:flex; flex-direction:column; gap:5px; align-items:flex-end; z-index:5;}
   .badge-mc{
     min-width:34px; text-align:center; padding:4px 7px; border-radius:8px;
     color:#fff; font-weight:700; font-size:.84rem;
@@ -79,25 +84,53 @@
     box-shadow:0 2px 6px rgba(0,0,0,.4);
   }
 
-  /* ---- Joya: borde celeste con destello giratorio ---- */
+  /* ---- Joya: aro celeste con destello giratorio ----
+     El destello es un hijo que rota con transform (lo mueve la GPU, sin
+     repintar). Antes se animaba un conic-gradient con @property, que obliga al
+     navegador a redibujar el degradado en cada cuadro. */
   .card.jewel{
     border-color:rgba(143,217,255,.45);
     box-shadow:0 0 14px rgba(120,200,255,.28), 0 6px 16px rgba(0,0,0,.4);
   }
-  .card.jewel::before{
-    content:""; position:absolute; inset:0; border-radius:inherit; padding:2px; z-index:4;
-    background:conic-gradient(from var(--ja),
+  .jewel-ring{
+    position:absolute; inset:0; z-index:4; border-radius:inherit; overflow:hidden;
+    padding:2px; pointer-events:none;
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+  }
+  .jewel-ring i{
+    position:absolute; left:50%; top:50%; width:170%; aspect-ratio:1;
+    transform:translate(-50%,-50%) rotate(0deg);
+    background:conic-gradient(
       rgba(143,217,255,.28) 0deg,
       rgba(143,217,255,.28) 288deg,
       rgba(191,234,255,.95) 322deg,
       #ffffff 336deg,
       rgba(191,234,255,.95) 350deg,
       rgba(143,217,255,.28) 360deg);
-    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite:xor; mask-composite:exclude;
-    animation:jewelSpin 7s linear infinite; pointer-events:none;
   }
-  @keyframes jewelSpin{ to{ --ja:360deg; } }
+  /* solo giran las tarjetas visibles en pantalla */
+  .card.onscreen .jewel-ring i{animation:jewelSpin 7s steps(84) infinite;}
+  @keyframes jewelSpin{
+    from{transform:translate(-50%,-50%) rotate(0deg);}
+    to{transform:translate(-50%,-50%) rotate(360deg);}
+  }
+  /* pestaña en segundo plano o usuario que pidió menos animación → todo quieto */
+  /* Solo se congela el destello. No se tocan las animaciones de entrada:
+     pausarlas dejaría el contenido invisible si la ventana abre sin foco. */
+  body.paused .jewel-ring i{animation-play-state:paused;}
+  @media (prefers-reduced-motion:reduce){
+    .card.onscreen .jewel-ring i{animation:none;}
+    section.view{animation:none;}
+  }
+
+  /* ---- Roto: cristal real delante de la portada ---- */
+  .card.broken::after{
+    content:""; position:absolute; inset:0; z-index:2; pointer-events:none; border-radius:inherit;
+    background-image:var(--glass); background-size:100% 100%;
+  }
+  .card.broken{border-color:rgba(255,255,255,.22);}
 
   .empty-state{
     grid-column:1/-1; text-align:center; color:var(--soft); padding:70px 20px;
@@ -105,37 +138,46 @@
     font-size:.88rem; letter-spacing:.04em;
   }
 
-  /* ================= Top 10 ================= */
-  .top10-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:16px;}
-  .slot{
-    position:relative; aspect-ratio:1/1; border-radius:var(--radius); overflow:hidden;
-    border:1px dashed rgba(233,199,117,.28); background:rgba(0,0,0,.22);
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    color:var(--soft); transition:all .22s ease;
+  /* ================= Top 10 (lista vertical) ================= */
+  .top10-list{display:flex; flex-direction:column; gap:10px;}
+  .t-row{
+    display:flex; align-items:center; gap:14px; padding:10px 14px 10px 10px;
+    border-radius:16px; border:1px solid var(--line); background:rgba(0,0,0,.26);
+    cursor:pointer; transition:border-color .2s ease, background .2s ease, transform .2s ease;
   }
-  .slot:hover{border-color:var(--gold); color:var(--gold); background:rgba(233,199,117,.05);}
-  .slot .rank{
-    position:absolute; top:9px; left:9px; z-index:3;
-    width:30px; height:30px; border-radius:50%;
+  .t-row:hover{border-color:rgba(233,199,117,.4); background:rgba(233,199,117,.05); transform:translateX(2px);}
+  .t-row.empty{border-style:dashed; border-color:rgba(233,199,117,.24);}
+  .t-rank{
+    width:34px; height:34px; flex-shrink:0; border-radius:50%;
     background:linear-gradient(180deg,var(--gold),var(--amber));
-    color:#22150a; font-weight:700; font-size:.92rem;
+    color:#22150a; font-family:Georgia,serif; font-weight:700; font-size:.95rem;
     display:flex; align-items:center; justify-content:center;
-    box-shadow:0 3px 10px rgba(0,0,0,.5); font-family:Georgia,serif;
+    box-shadow:0 3px 10px rgba(0,0,0,.45);
   }
-  .slot.filled{border-style:solid; border-color:rgba(233,199,117,.35);}
-  .slot.filled img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
-  .slot .plus{font-size:1.5rem; font-weight:300; opacity:.65;}
-  .slot .slot-name{
-    position:absolute; left:0; right:0; bottom:0; z-index:2;
-    padding:26px 10px 9px; font-size:.78rem; font-weight:600; color:var(--cream); text-align:center;
-    background:linear-gradient(180deg,transparent, rgba(8,4,1,.9));
+  .t-row.empty .t-rank{background:none; border:1px solid rgba(233,199,117,.35); color:var(--soft); box-shadow:none;}
+  .t-cover{
+    width:62px; height:62px; flex-shrink:0; border-radius:12px; overflow:hidden;
+    background:var(--card); position:relative;
   }
-  .slot .unslot{
-    position:absolute; top:9px; right:9px; z-index:3; appearance:none; border:none;
-    width:24px; height:24px; border-radius:50%; cursor:pointer; font-size:.75rem; line-height:1;
-    background:rgba(0,0,0,.65); color:var(--cream); display:none;
+  .t-cover img{width:100%; height:100%; object-fit:cover; display:block;}
+  .t-cover.jewel{box-shadow:0 0 10px rgba(120,200,255,.4); border:1px solid rgba(143,217,255,.55);}
+  .t-cover.broken::after{content:""; position:absolute; inset:0; background-image:var(--glass); background-size:100% 100%;}
+  .t-main{flex:1; min-width:0;}
+  .t-name{font-size:.98rem; font-weight:650; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .t-meta{
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:5px;
+    font-size:.76rem; color:var(--soft);
   }
-  .slot.filled:hover .unslot{display:block;}
+  .t-meta span{white-space:nowrap;}
+  .t-meta .dot{opacity:.45;}
+  .t-scores{display:flex; align-items:center; gap:6px; flex-shrink:0;}
+  .t-empty-txt{color:var(--soft); font-size:.86rem;}
+  .t-x{
+    appearance:none; border:none; background:rgba(255,255,255,.07); color:var(--soft);
+    width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:.72rem; flex-shrink:0;
+    transition:background .18s ease, color .18s ease;
+  }
+  .t-x:hover{background:rgba(192,86,62,.3); color:#f0c6b8;}
 
   /* ================= Barra de filtros ================= */
   .filterbar{
@@ -144,35 +186,88 @@
   }
   .filterbar select{
     width:auto; appearance:none; font:inherit; font-size:.82rem; cursor:pointer;
-    color:var(--soft); background:rgba(18,10,4,.85); backdrop-filter:blur(10px);
+    color:var(--soft); background:rgba(26,15,6,.96);
     border:1px solid rgba(233,199,117,.2); border-radius:999px; padding:8px 16px;
-    outline:none; transition:all .2s ease; letter-spacing:.02em; text-align:center;
+    outline:none; transition:color .2s ease, border-color .2s ease; letter-spacing:.02em; text-align:center;
   }
   .filterbar select:hover, .filterbar select:focus{color:var(--cream); border-color:rgba(233,199,117,.45);}
   .filterbar select option{background:#241609; color:var(--cream);}
   .filterbar.hidden{display:none;}
 
-  /* ---- Sin finalizar: vidrio destrozado ---- */
-  .card.unfinished{border-color:rgba(255,255,255,.22);}
-  .card.unfinished::after{
-    content:""; position:absolute; inset:0; z-index:2; pointer-events:none; border-radius:inherit;
-    background:
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300' preserveAspectRatio='none'><defs><g id='c' fill='none'><path d='M80,70 L137,52 L184,37 L248,30 L293,11'/><path d='M80,70 L141,104 L206,118 L263,147 L298,181'/><path d='M80,70 L100,130 L114,191 L131,261 L149,298'/><path d='M80,70 L71,148 L58,219 L65,287 L51,298'/><path d='M80,70 L34,96 L2,115 L2,145 L2,169'/><path d='M80,70 L16,61 L2,50 L2,37 L2,28'/><path d='M80,70 L14,28 L2,2 L2,2 L2,2'/><path d='M80,70 L69,34 L50,2 L38,2 L23,2'/><path d='M80,70 L97,35 L98,2 L105,2 L110,2'/><path d='M80,70 L117,41 L172,7 L212,2 L249,2'/><path d='M92,69 L94,76'/><path d='M94,76 L85,83'/><path d='M85,83 L78,88'/><path d='M68,82 L65,69'/><path d='M63,61 L78,53'/><path d='M83,54 L95,62'/><path d='M120,60 L112,82'/><path d='M112,82 L90,105'/><path d='M90,105 L73,110'/><path d='M73,110 L48,90'/><path d='M48,90 L39,64'/><path d='M39,64 L51,49'/><path d='M51,49 L68,35'/><path d='M68,35 L87,32'/><path d='M87,32 L113,44'/><path d='M113,44 L120,60'/><path d='M142,52 L136,101'/><path d='M136,101 L96,130'/><path d='M96,130 L75,132'/><path d='M27,105 L14,56'/><path d='M23,32 L59,5'/><path d='M59,5 L91,7'/><path d='M91,7 L131,29'/><path d='M131,29 L142,52'/><path d='M174,44 L174,114'/><path d='M174,114 L111,167'/><path d='M111,167 L65,166'/><path d='M65,166 L-1,122'/><path d='M-1,122 L-17,54'/><path d='M-5,16 L43,-26'/><path d='M43,-26 L100,-32'/><path d='M159,2 L174,44'/><path d='M228,150 L265,148 L297,149 L298,158 L298,160'/><path d='M228,150 L281,185 L298,233 L298,262 L298,292'/><path d='M228,150 L229,213 L249,275 L250,298 L258,298'/><path d='M228,150 L221,185 L206,219 L190,241 L169,271'/><path d='M228,150 L169,175 L111,205 L40,219 L2,244'/><path d='M228,150 L172,139 L127,124 L57,119 L14,121'/><path d='M228,150 L205,125 L185,85 L176,69 L146,43'/><path d='M228,150 L235,90 L234,42 L241,2 L246,2'/><path d='M228,150 L263,110 L298,87 L298,54 L298,15'/><path d='M242,147 L235,159'/><path d='M221,161 L214,153'/><path d='M214,153 L214,144'/><path d='M214,144 L221,138'/><path d='M221,138 L229,136'/><path d='M229,136 L234,144'/><path d='M234,144 L242,147'/><path d='M264,149 L255,171'/><path d='M255,171 L231,188'/><path d='M231,188 L213,183'/><path d='M213,183 L197,160'/><path d='M197,160 L197,144'/><path d='M197,144 L212,125'/><path d='M212,125 L229,118'/><path d='M254,125 L264,149'/><path d='M289,147 L275,189'/><path d='M275,189 L238,208'/><path d='M238,208 L205,203'/><path d='M205,203 L173,171'/><path d='M173,171 L166,138'/><path d='M166,138 L193,102'/><path d='M193,102 L234,93'/><path d='M234,93 L275,109'/><path d='M275,109 L289,147'/><path d='M110,248 L176,245 L237,233 L296,238 L298,225'/><path d='M110,248 L140,280 L164,298 L208,298 L229,298'/><path d='M110,248 L104,298 L109,298 L116,298 L108,298'/><path d='M110,248 L62,276 L15,298 L2,298 L2,298'/><path d='M110,248 L84,247 L46,236 L15,218 L2,208'/><path d='M110,248 L84,217 L59,172 L38,134 L10,115'/><path d='M110,248 L103,196 L101,129 L99,70 L96,8'/><path d='M110,248 L141,215 L160,172 L186,126 L223,82'/><path d='M124,250 L115,257'/><path d='M115,257 L111,263'/><path d='M111,263 L101,254'/><path d='M101,254 L93,244'/><path d='M93,244 L101,233'/><path d='M101,233 L110,229'/><path d='M110,229 L120,236'/><path d='M120,236 L124,250'/><path d='M147,243 L130,277'/><path d='M108,287 L83,268'/><path d='M83,268 L78,242'/><path d='M78,242 L91,220'/><path d='M91,220 L109,210'/><path d='M109,210 L126,219'/><path d='M126,219 L147,243'/><path d='M170,246 L152,296'/><path d='M152,296 L115,312'/><path d='M115,312 L64,282'/><path d='M64,282 L47,231'/><path d='M47,231 L75,198'/><path d='M107,185 L146,198'/><path d='M146,198 L170,246'/></g></defs><g fill='white' fill-opacity='0.10'><polygon points='92,69 94,76 112,82 120,60'/><polygon points='85,83 78,88 73,110 90,105'/><polygon points='48,90 39,64 14,56 27,105'/><polygon points='23,32 59,5 43,-26 -5,16'/><polygon points='91,7 131,29 159,2 100,-32'/><polygon points='264,149 255,171 275,189 289,147'/><polygon points='231,188 213,183 205,203 238,208'/><polygon points='214,153 214,144 197,144 197,160'/><polygon points='221,138 229,136 229,118 212,125'/><polygon points='234,144 242,147 264,149 254,125'/><polygon points='124,250 115,257 130,277 147,243'/><polygon points='111,263 101,254 83,268 108,287'/><polygon points='93,244 101,233 91,220 78,242'/><polygon points='109,210 126,219 146,198 107,185'/></g><use href='%23c' stroke='black' stroke-opacity='0.45' stroke-width='4'/><use href='%23c' stroke='white' stroke-opacity='0.9' stroke-width='1.7'/><circle cx='80' cy='70' r='4.5' fill='white' fill-opacity='0.95'/><circle cx='80' cy='70' r='9' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='1.6'/><circle cx='228' cy='150' r='4.5' fill='white' fill-opacity='0.95'/><circle cx='228' cy='150' r='9' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='1.6'/><circle cx='110' cy='248' r='4.5' fill='white' fill-opacity='0.95'/><circle cx='110' cy='248' r='9' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='1.6'/></svg>");
-    background-size:100% 100%;
+  /* ================= Métricas ================= */
+  .metrics-head{
+    max-width:840px;
+    display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;
+    margin-bottom:20px;
   }
+  .m-title{font-family:Georgia,serif; font-size:1.3rem; font-weight:500;}
+  .m-sub{font-size:.8rem; color:var(--soft); margin-top:4px;}
+  .m-seg{display:flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; background:rgba(0,0,0,.25);}
+  .m-seg button{
+    appearance:none; border:none; background:transparent; color:var(--soft); font:inherit;
+    font-size:.82rem; padding:9px 18px; cursor:pointer; transition:color .2s ease, background .2s ease;
+  }
+  .m-seg button:hover{color:var(--cream);}
+  .m-seg button.on{background:linear-gradient(180deg,var(--gold),var(--amber)); color:#22150a; font-weight:650;}
+  #view-top10, #view-metrics{padding-top:44px;}
+  .chart-card{
+    max-width:840px;
+    border:1px solid var(--line); border-radius:20px; background:rgba(0,0,0,.24);
+    padding:20px 18px 14px; position:relative;
+  }
+  .chart-card h4{font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; color:var(--soft); font-weight:600;}
+  .chart-total{font-family:Georgia,serif; font-size:1.9rem; margin:6px 0 14px; line-height:1;}
+  .chart-total small{font-family:inherit; font-size:.8rem; color:var(--soft); letter-spacing:.02em; margin-left:7px;}
+  .chart-wrap{position:relative; width:100%;}
+  .chart-wrap svg{display:block; width:100%; height:auto; overflow:visible;}
+  .chart-tip{
+    position:absolute; z-index:5; pointer-events:none; opacity:0; transform:translate(-50%,-120%);
+    background:rgba(24,14,6,.97); border:1px solid rgba(233,199,117,.35); border-radius:10px;
+    padding:7px 11px; font-size:.78rem; white-space:nowrap; color:var(--cream);
+    box-shadow:0 8px 24px rgba(0,0,0,.55); transition:opacity .14s ease;
+  }
+  .chart-tip.on{opacity:1;}
+  .chart-tip b{color:var(--gold);}
+  .metrics-empty{
+    max-width:840px;
+    border:1px dashed var(--line); border-radius:20px; padding:60px 24px; text-align:center;
+    color:var(--soft); font-size:.88rem; line-height:1.7;
+  }
+
+  /* ================= Botón trofeo (Top 10) ================= */
+  .trophy{
+    position:fixed; top:20px; right:20px; z-index:58;
+    width:50px; height:50px; border-radius:50%; cursor:pointer;
+    appearance:none; display:flex; align-items:center; justify-content:center;
+    background:rgba(26,15,6,.92); border:1px solid rgba(233,199,117,.3); color:var(--gold);
+    box-shadow:0 8px 24px rgba(0,0,0,.5); transition:transform .2s ease, background .2s ease, color .2s ease;
+  }
+  .trophy:hover{transform:translateY(-2px); background:rgba(233,199,117,.14);}
+  .trophy svg{width:24px; height:24px; display:block;}
+  .trophy.active{background:linear-gradient(180deg,var(--gold),var(--amber)); color:#22150a; border-color:rgba(255,244,214,.5);}
+  .trophy .tip, .counter .tip{
+    position:absolute; font-size:.72rem; letter-spacing:.02em; white-space:nowrap;
+    background:rgba(24,14,6,.97); color:var(--cream); border:1px solid rgba(233,199,117,.3);
+    padding:6px 11px; border-radius:9px; opacity:0; pointer-events:none;
+    transition:opacity .18s ease; box-shadow:0 8px 22px rgba(0,0,0,.5);
+  }
+  .trophy .tip{top:58px; right:0;}
+  .counter .tip{bottom:68px; left:0;}
+  .trophy:hover .tip, .trophy.show-tip .tip,
+  .counter:hover .tip, .counter.show-tip .tip{opacity:1;}
 
   /* ================= Dock inferior ================= */
   .dock{
     position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:60;
     display:flex; align-items:center; gap:4px;
-    background:rgba(18,10,4,.88); backdrop-filter:blur(14px);
+    background:rgba(20,12,5,.96);
     border:1px solid rgba(233,199,117,.18); border-radius:999px;
     padding:6px 8px; box-shadow:0 12px 40px rgba(0,0,0,.55);
   }
   .dock button{
     appearance:none; border:none; background:transparent; color:var(--soft);
     font:inherit; font-size:.86rem; padding:9px 16px; border-radius:999px;
-    cursor:pointer; transition:all .22s ease; letter-spacing:.02em; white-space:nowrap;
+    cursor:pointer; transition:color .22s ease, background .22s ease; letter-spacing:.02em; white-space:nowrap;
   }
   .dock button:hover{color:var(--cream);}
   .dock button.active{
@@ -208,7 +303,7 @@
   .overlay{
     position:fixed; inset:0; z-index:100; display:none;
     align-items:flex-start; justify-content:center; padding:5vh 16px 4vh;
-    background:rgba(8,4,1,.7); backdrop-filter:blur(8px); overflow-y:auto;
+    background:rgba(8,4,1,.86); overflow-y:auto;
   }
   .overlay.open{display:flex;}
   .panel{
@@ -228,23 +323,25 @@
   /* --- Detalle --- */
   .detail{display:flex; gap:22px; align-items:flex-start;}
   .detail .d-cover{
-    width:200px; aspect-ratio:1/1; border-radius:14px; overflow:hidden; flex-shrink:0;
+    width:210px; aspect-ratio:1/1; border-radius:14px; overflow:hidden; flex-shrink:0;
     background:var(--card); position:relative;
   }
   .detail .d-cover img{width:100%; height:100%; object-fit:cover; display:block;}
+  .detail .d-cover svg{width:100%; height:100%; display:block;}
   .detail .d-cover.jewel{box-shadow:0 0 16px rgba(120,200,255,.35); border:2px solid rgba(143,217,255,.6);}
   .detail .d-info{flex:1; min-width:0;}
   .detail h3{margin-bottom:2px;}
   .detail .d-genre{color:var(--soft); font-size:.85rem; margin-bottom:16px;}
   .d-rows{display:flex; flex-direction:column; gap:9px; margin-bottom:16px;}
   .d-row{display:flex; align-items:baseline; gap:10px; font-size:.88rem;}
-  .d-row .k{width:120px; flex-shrink:0; font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; color:var(--soft);}
+  .d-row .k{width:142px; flex-shrink:0; font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; color:var(--soft);}
   .chip{display:inline-block; padding:3px 10px; border-radius:8px; font-weight:700; font-size:.8rem;}
   .chip.mc.low{background:#b23a28; color:#fff;}
   .chip.mc.mid{background:#d9a62e; color:#231803;}
   .chip.mc.high{background:#3f8f52; color:#fff;}
   .chip.me{background:#fff; color:#111;}
   .chip.jewel-tag{background:rgba(143,217,255,.15); color:var(--sky); border:1px solid rgba(143,217,255,.4); font-weight:600;}
+  .chip.broken-tag{background:rgba(255,255,255,.09); color:#e6e9ee; border:1px solid rgba(255,255,255,.3); font-weight:600;}
   .d-note-label{font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; color:var(--soft); margin-bottom:7px;}
   textarea#dNote{
     width:100%; min-height:96px; resize:vertical;
@@ -272,18 +369,32 @@
   .seg{display:flex; border:1px solid var(--line); border-radius:11px; overflow:hidden;}
   .seg label{
     flex:1; text-align:center; padding:9px 6px; cursor:pointer; font-size:.84rem;
-    color:var(--soft); transition:all .2s ease; letter-spacing:.02em;
+    color:var(--soft); transition:background .2s ease, color .2s ease; letter-spacing:.02em;
     text-transform:none; margin:0;
   }
   .seg input{display:none;}
   .seg label:has(input:checked){
     background:linear-gradient(180deg,var(--gold),var(--amber)); color:#22150a; font-weight:600;
   }
-  .check-line{display:flex; align-items:center; gap:9px; font-size:.88rem; cursor:pointer; user-select:none; margin:2px 0 14px;}
-  .check-line input{accent-color:var(--sky-deep); width:15px; height:15px; cursor:pointer;}
+  /* Casillas: solo la casilla marca. El texto de al lado no es un <label>,
+     así que pulsar lejos ya no activa nada. */
+  .check-row{display:flex; gap:26px; align-items:center; margin:4px 0 16px; flex-wrap:wrap;}
+  .chk{display:inline-flex; align-items:center; gap:9px; font-size:.9rem;}
+  .chk input{
+    appearance:none; width:20px; height:20px; flex-shrink:0; cursor:pointer;
+    border:1.5px solid rgba(233,199,117,.45); border-radius:6px; background:rgba(0,0,0,.35);
+    transition:background .18s ease, border-color .18s ease; position:relative;
+  }
+  .chk input:hover{border-color:var(--gold);}
+  .chk input:checked{background:linear-gradient(180deg,var(--gold),var(--amber)); border-color:var(--amber);}
+  .chk input:checked::after{
+    content:""; position:absolute; left:6px; top:2px; width:5px; height:10px;
+    border:solid #22150a; border-width:0 2.2px 2.2px 0; transform:rotate(42deg);
+  }
+  .chk span{color:var(--cream); user-select:none;}
   .btn{
     appearance:none; border:none; font:inherit; font-weight:600; font-size:.9rem;
-    padding:10px 20px; border-radius:11px; cursor:pointer; transition:all .2s ease;
+    padding:10px 20px; border-radius:11px; cursor:pointer; transition:filter .2s ease, background .2s ease, border-color .2s ease;
   }
   .btn.primary{background:linear-gradient(180deg,var(--gold),var(--amber)); color:#22150a;}
   .btn.primary:hover{filter:brightness(1.07);}
@@ -299,7 +410,7 @@
   .pick{
     display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:12px;
     background:rgba(0,0,0,.25); border:1px solid var(--line); cursor:pointer;
-    appearance:none; font:inherit; color:var(--cream); text-align:left; transition:all .18s ease; width:100%;
+    appearance:none; font:inherit; color:var(--cream); text-align:left; transition:border-color .18s ease, background .18s ease; width:100%;
   }
   .pick:hover{border-color:var(--amber); background:rgba(233,199,117,.06);}
   .pick img{width:44px; height:44px; object-fit:cover; border-radius:8px; flex-shrink:0;}
@@ -309,13 +420,13 @@
 
   /* pantalla de entrada obligatoria */
   .overlay.gate .close-x{display:none;}
-  .overlay.gate{background:rgba(8,4,1,.9);}
+  .overlay.gate{background:rgba(8,4,1,.94);}
 
-  /* contador de jugados (meta 100) */
+  /* contador de terminados (meta 100) */
   .counter{
     position:fixed; left:22px; bottom:22px; z-index:58; width:58px; height:58px; border-radius:50%;
     background:linear-gradient(180deg,var(--gold),var(--amber)); border:1px solid rgba(255,244,214,.4);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:default;
     box-shadow:0 6px 18px rgba(217,164,65,.35), 0 10px 30px rgba(0,0,0,.45);
   }
   .counter .n{font-family:Georgia,serif; font-size:1.2rem; color:#22150a; font-weight:600; line-height:1;}
@@ -326,17 +437,28 @@
     position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(16px);
     background:rgba(30,18,8,.96); color:var(--cream);
     border:1px solid rgba(233,199,117,.35); border-radius:11px; padding:10px 20px;
-    font-size:.85rem; opacity:0; pointer-events:none; transition:all .3s ease; z-index:200;
+    font-size:.85rem; opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; z-index:200;
     box-shadow:0 10px 30px rgba(0,0,0,.5); white-space:nowrap;
   }
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   @media (max-width:640px){
-    .grid, .top10-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;}
     .detail{flex-direction:column;}
     .detail .d-cover{width:100%; max-width:260px; margin:0 auto;}
     .dock button{padding:9px 11px; font-size:.8rem;}
     .wrap{padding-top:22px;}
+    .trophy{top:14px; right:14px; width:46px; height:46px;}
+    .t-row{gap:10px; padding:9px 10px;}
+    .t-cover{width:54px; height:54px;}
+    .t-name{font-size:.9rem; white-space:normal;}
+    .t-meta{font-size:.71rem; gap:3px 12px;}
+    .t-meta .dot{display:none;}
+    .t-scores{flex-direction:column; gap:4px;}
+    .metrics-head{flex-direction:column; align-items:flex-start;}
+    .m-seg{width:100%;}
+    .m-seg button{flex:1;}
+    .chart-card{padding:16px 12px 10px;}
   }
 </style>
 </head>
@@ -362,9 +484,33 @@
   </section>
 
   <section class="view" id="view-top10">
-    <div class="top10-grid" id="top10Grid"></div>
+    <div class="top10-list" id="top10List"></div>
+  </section>
+
+  <section class="view" id="view-metrics">
+    <div class="metrics-head">
+      <div>
+        <div class="m-title">Métricas</div>
+        <div class="m-sub" id="mSub">Tu recorrido en números</div>
+      </div>
+      <div class="m-seg" id="mSeg">
+        <button data-m="year" class="on">Por año</button>
+        <button data-m="genre">Por género</button>
+      </div>
+    </div>
+    <div id="metricsBody"></div>
   </section>
 </main>
+
+<button class="trophy" id="btnTrophy" aria-label="Top 10">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/>
+    <path d="M17 5h2.5a1 1 0 0 1 1 1c0 2.2-1.6 3.7-3.5 4"/>
+    <path d="M7 5H4.5a1 1 0 0 0-1 1c0 2.2 1.6 3.7 3.5 4"/>
+    <path d="M12 14v3.5"/><path d="M8.5 20.5h7"/><path d="M10 17.5h4l.7 3h-5.4l.7-3Z"/>
+  </svg>
+  <span class="tip">Top 10</span>
+</button>
 
 <div class="menu" id="menu">
   <button id="btnAccount">Cuenta</button>
@@ -374,14 +520,15 @@
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </div>
 
-<div class="counter" id="playedCounter" title="Juegos jugados — meta: 100">
+<div class="counter" id="playedCounter">
   <span class="n">0</span><span class="g">DE 100</span>
+  <span class="tip">Juegos terminados</span>
 </div>
 
 <nav class="dock">
   <button data-view="played" class="active">Jugados</button>
   <button data-view="quiero">Próximos</button>
-  <button data-view="top10">Top 10</button>
+  <button data-view="metrics">Métricas</button>
   <span class="sep"></span>
   <button class="add" id="btnAdd" title="Agregar juego">+</button>
   <button class="more" id="btnMore" title="Más opciones">···</button>
@@ -429,6 +576,11 @@
       </div>
       <div class="field"><label>Fecha de salida</label><input type="date" id="fReleased"></div>
     </div>
+    <div class="field">
+      <label>Desarrolladora</label>
+      <input type="text" id="fDev" list="devList" placeholder="Qué empresa lo hizo" autocomplete="off">
+      <datalist id="devList"></datalist>
+    </div>
     <div class="field-row">
       <div class="field"><label>Metacritic</label><input type="number" id="fMc" min="0" max="100" placeholder="0–100"></div>
       <div class="field"><label>Mi puntaje</label><input type="number" id="fMe" min="0" max="100" placeholder="0–100"></div>
@@ -446,7 +598,10 @@
       <label>Año en que lo finalizaste</label>
       <input type="number" id="fYearFin" min="1990" max="2100" placeholder="2026">
     </div>
-    <label class="check-line"><input type="checkbox" id="fJewel"> Marcar como joya</label>
+    <div class="check-row">
+      <span class="chk"><input type="checkbox" id="fJewel"><span>Joya</span></span>
+      <span class="chk"><input type="checkbox" id="fBroken"><span>Roto</span></span>
+    </div>
     <div class="form-actions">
       <button class="btn ghost" data-close="ovForm">Cancelar</button>
       <button class="btn primary" id="fSave">Guardar</button>
@@ -492,7 +647,7 @@
 <script>
 "use strict";
 /* ============================================================
-   MI VITRINA · v2 — 100% local y manual
+   MI VITRINA · v4 — 100% local y manual
    ============================================================ */
 const LS_KEY = "vitrina-videojuegos-v1";
 
@@ -500,7 +655,8 @@ const LS_KEY = "vitrina-videojuegos-v1";
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const uid = () => "g" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-function esc(s){ const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
+function esc(s){ const d = document.createElement("div"); d.textContent = s ?? "";
+  return d.innerHTML.replace(/"/g, "&quot;"); }
 function fixYear(y){ if(y==null || y==="") return null; y = +y; return y < 100 ? 2000 + y : y; }
 function mcClass(v){ return v <= 49 ? "low" : v <= 79 ? "mid" : "high"; }
 function fmtDate(iso){
@@ -509,17 +665,115 @@ function fmtDate(iso){
   if(isNaN(d)) return null;
   return d.toLocaleDateString("es-EC", { day:"numeric", month:"long", year:"numeric" });
 }
+function fmtDateShort(iso){
+  if(!iso) return null;
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)) return null;
+  return d.toLocaleDateString("es-EC", { day:"numeric", month:"short", year:"numeric" });
+}
 function toast(msg){
   const t = $("#toast"); t.textContent = msg; t.classList.add("show");
   clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("show"), 2400);
 }
 function openOv(id){ $("#"+id).classList.add("open"); }
-function closeOv(id){ $("#"+id).classList.remove("open"); }
+function closeOv(id){
+  $("#"+id).classList.remove("open");
+  if(id === "ovDetail") $("#dCover").innerHTML = "";   // libera el SVG del cristal
+}
 $$("[data-close]").forEach(b => b.addEventListener("click", ()=>closeOv(b.dataset.close)));
-$$(".overlay").forEach(ov => ov.addEventListener("click", e => { if(e.target === ov && !ov.classList.contains("gate") && ov.id !== "ovForm") ov.classList.remove("open"); }));
-document.addEventListener("keydown", e => { if(e.key === "Escape"){ $$(".overlay.open:not(.gate)").forEach(o=>{ if(o.id !== "ovForm") o.classList.remove("open"); }); $("#menu").classList.remove("open"); } });
+$$(".overlay").forEach(ov => ov.addEventListener("click", e => { if(e.target === ov && !ov.classList.contains("gate") && ov.id !== "ovForm") closeOv(ov.id); }));
+document.addEventListener("keydown", e => { if(e.key === "Escape"){ $$(".overlay.open:not(.gate)").forEach(o=>{ if(o.id !== "ovForm") closeOv(o.id); }); $("#menu").classList.remove("open"); } });
 
-/* ---------- Datos (con migración desde v1) ---------- */
+/* ============================================================
+   CRISTAL ROTO — geometría de un impacto real (generada una vez)
+   ============================================================ */
+const GLASS_CELLS=[[[145.1,119.5],[154.4,119.6],[167.5,120.9],[190.2,122.1],[217.7,127.1],[187.9,173],[166.9,156.5],[154.8,144.7],[146.9,135.4],[141.5,130]],[[141.5,130],[146.9,135.4],[154.8,144.7],[166.9,156.5],[187.9,173],[109.6,203.4],[116.8,176.5],[121.6,153.9],[125.8,141.2],[128.2,133.7]],[[128.2,133.7],[125.8,141.2],[121.6,153.9],[116.8,176.5],[109.6,203.4],[58.5,164.8],[82.4,148.2],[103.1,137.6],[114,130.3],[120.5,127.3]],[[120.5,127.3],[114,130.3],[103.1,137.6],[82.4,148.2],[58.5,164.8],[43.3,111.1],[80,114.8],[101.9,116],[109.7,118.1],[120.3,118.5]],[[120.3,118.5],[109.7,118.1],[101.9,116],[80,114.8],[43.3,111.1],[82.1,52.5],[97,75.3],[111.7,95.7],[118.6,102.6],[124.4,110.1]],[[124.4,110.1],[118.6,102.6],[111.7,95.7],[97,75.3],[82.1,52.5],[144.7,35.8],[138.7,62],[135.9,84.4],[134.7,99.2],[133.9,107.3]],[[133.9,107.3],[134.7,99.2],[135.9,84.4],[138.7,62],[144.7,35.8],[191.3,64.7],[175.3,81.1],[157.1,96.4],[147.1,106.9],[142.6,111]],[[142.6,111],[147.1,106.9],[157.1,96.4],[167.5,120.9],[154.4,119.6],[145.1,119.5]],[[157.1,96.4],[175.3,81.1],[191.3,64.7],[217.7,127.1],[190.2,122.1],[167.5,120.9]],[[217.7,127.1],[254,134],[233,224.6],[187.9,173]],[[187.9,173],[233,224.6],[156.1,253.7],[149.1,199.5]],[[149.1,199.5],[156.1,253.7],[101.7,250],[109.6,203.4]],[[109.6,203.4],[101.7,250],[15.2,191.6],[58.5,164.8]],[[58.5,164.8],[15.2,191.6],[0,108.5],[43.3,111.1]],[[43.3,111.1],[0,108.5],[42.5,2.4],[82.1,52.5]],[[82.1,52.5],[42.5,2.4],[68.8,-3],[149.9,-3],[144.7,35.8]],[[144.7,35.8],[149.9,-3],[187.6,-3],[231.8,18.6],[191.3,64.7]],[[191.3,64.7],[231.8,18.6],[254,134],[217.7,127.1]],[[254,134],[303,139.8],[303,205.7],[255.5,177.2]],[[255.5,177.2],[303,205.7],[303,241.5],[266.9,263.5],[233,224.6]],[[233,224.6],[266.9,263.5],[223.7,303],[169.6,303],[156.1,253.7]],[[156.1,253.7],[169.6,303],[93.1,303],[101.7,250]],[[101.7,250],[93.1,303],[18.4,303],[3,293],[42,230.2]],[[42,230.2],[3,293],[-3,284.9],[-3,205.3],[15.2,191.6]],[[15.2,191.6],[-3,205.3],[-3,162.3]],[[-3,108],[0,108.5],[-3,159.8]],[[0,108.5],[-3,108],[-3,38.4],[16.2,51.9]],[[16.2,51.9],[-3,38.4],[-3,-3],[37.6,-3],[42.5,2.4]],[[42.5,2.4],[37.6,-3],[59.9,-3]],[[214.4,-3],[209.6,3.4],[194.1,-3]],[[209.6,3.4],[214.4,-3],[258.4,-3],[231.8,18.6]],[[231.8,18.6],[258.4,-3],[303,-3],[303,39.8],[264.7,61.8]],[[264.7,61.8],[303,39.8],[303,139.8],[254,134]],[[302.1,303],[266.9,263.5],[303,242.7],[303,303]],[[266.9,263.5],[302.1,303],[245.7,303]],[[15.2,303],[19,297.7],[26.2,303]],[[19,297.7],[15.2,303],[-3,303],[-3,298.9],[3,293]],[[3,293],[-3,298.9],[-3,284.9]],[[127.2,132.9],[124.7,124.4],[125.5,124.2],[134.8,131.9],[128.2,133.7]],[[144.2,116.6],[133.9,117.9],[133.6,114.9],[135.3,113.7],[143.1,112.8]],[[134.8,131.9],[125.5,124.2],[129.1,120.3],[132.6,120.5],[135.8,125.5],[135.8,131.6]],[[122.2,114.6],[123.9,116.5],[120.4,122],[120.3,118.5]],[[135.8,125.5],[132.6,120.5],[133.9,117.9],[144.2,116.6],[144.7,118.2]],[[126.5,116.7],[123.9,116.5],[122.2,114.6],[123.5,111.9],[129.1,111.8]],[[129.1,120.3],[125.5,124.2],[124.7,124.4],[120.4,124.5],[120.4,122],[123.9,116.5],[126.5,116.7]],[[124.7,124.4],[127.2,132.9],[120.5,127.3],[120.4,124.5]],[[130.1,108.4],[129.8,111.1],[129.1,111.8],[123.5,111.9],[124.4,110.1]],[[135.3,113.7],[133.6,114.9],[129.8,111.1],[130.1,108.4],[132.5,107.7],[135.8,111]],[[133.6,114.9],[133.9,117.9],[132.6,120.5],[129.1,120.3],[126.5,116.7],[129.1,111.8],[129.8,111.1]],[[140.2,110],[135.8,111],[132.5,107.7],[133.9,107.3]],[[135.8,131.6],[135.8,125.5],[144.7,118.2],[145.1,119.5],[141.5,130]],[[143.1,112.8],[135.3,113.7],[135.8,111],[140.2,110],[142.6,111]]];
+const GLASS_BANDS=[0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+const GLASS_DUST=[[128.2,134.6,0.66,0.43],[147.2,120.1,0.21,0.17],[119.3,124.9,0.51,0.15],[121.8,129.9,0.42,0.2],[117.3,119,0.62,0.24],[121.3,110,0.52,0.47],[142.3,125.9,0.42,0.55],[133.1,131,0.78,0.3],[128.2,126.8,0.79,0.3],[138.9,120.3,0.89,0.34],[125.6,107.6,0.85,0.24],[124.1,107.6,0.59,0.19],[145.2,121.9,1.04,0.36],[125.1,132.4,0.9,0.34],[133.5,112.1,0.83,0.4],[135.7,115.3,0.83,0.16],[127.4,132.4,0.52,0.27],[135.6,118.7,0.86,0.14],[123.6,111,0.81,0.12],[143.7,130,0.36,0.38],[144.3,109.1,0.32,0.15],[118.6,123.8,0.62,0.51],[121.9,124,0.27,0.14],[141.3,117.1,0.81,0.53],[139.2,106.8,0.96,0.27],[146.9,123.9,0.71,0.49],[135,136.7,0.5,0.13],[124.6,114.8,0.6,0.27],[137.1,130.2,0.8,0.19],[124.6,111.1,0.91,0.42],[128.8,113.3,0.27,0.57],[119.9,120.9,0.77,0.51],[132.3,111.8,0.87,0.27],[146,123.9,1.01,0.55],[125.3,117.2,0.5,0.52],[132.2,113.9,0.75,0.52],[130.5,122.7,0.79,0.17],[141.4,126,0.53,0.49],[143.7,130,1.04,0.28],[137,126.5,0.35,0.15],[131.7,108.3,0.34,0.45],[122,123.4,0.62,0.16],[141.7,111.9,0.39,0.26],[136,120.7,0.25,0.37],[143.9,116.4,0.94,0.32],[120.7,131,0.67,0.51],[133.4,130.9,0.73,0.17],[129.6,117.7,0.76,0.45],[125.1,116.6,0.5,0.35],[118.7,125.2,0.64,0.52],[143.9,114,0.63,0.35],[140.1,119.3,0.39,0.29],[141.3,125.3,0.68,0.46],[145.7,116.6,1.04,0.13],[143.7,126.6,0.85,0.5],[122.6,119.8,0.64,0.18],[136.4,130.8,0.46,0.37],[145.7,125.8,0.29,0.39],[119.7,113.8,0.46,0.19],[118.6,120.6,0.83,0.38],[124.1,129,0.24,0.37],[126.3,122,0.41,0.19],[130.6,116.9,0.93,0.16],[124.2,113.5,0.24,0.51],[146.6,121.2,0.89,0.26],[142.7,112.4,1.04,0.28],[139.2,134,0.32,0.23],[134.5,112.4,0.42,0.52],[145.4,122.1,0.4,0.12],[131.7,110.7,0.92,0.33],[123.6,121.3,0.98,0.23],[140,132.1,0.73,0.55],[140.7,106.4,0.79,0.28],[118.7,126.5,0.58,0.51],[136.7,105.8,0.37,0.16],[124.4,112.8,0.29,0.14],[141.9,122.9,0.27,0.52],[121.3,116.7,0.42,0.29],[145.2,121,0.42,0.36],[132.2,108.9,0.95,0.47],[134.1,103.3,0.64,0.47],[121.5,125.7,0.65,0.49],[116.5,123.7,0.89,0.23],[121,110.7,0.38,0.15],[131.7,130.3,0.57,0.35],[129.2,120.8,0.94,0.55],[133.2,125,0.85,0.17],[119.6,112.2,0.87,0.18],[144.5,126.9,0.8,0.54],[117.3,116.7,0.5,0.36]];
+const GLASS_IMPACT=[132,120];
+
+/* Capa compartida por todas las tarjetas rotas: se arma una sola vez y se usa
+   como imagen de fondo, así no cuesta nada por tarjeta. */
+/* El bisel es más fuerte junto al golpe y se apaga hacia las esquinas: así se
+   lee un impacto y no una telaraña uniforme. Tres bandas por distancia. */
+const GLASS_BEVEL = [
+  { w:.45, wo:1.5, d:.40, do_:2.0, t:.30 },   // junto al impacto
+  { w:.34, wo:1.2, d:.30, do_:1.6, t:.24 },
+  { w:.20, wo:1.0, d:.19, do_:1.3, t:.16 }    // esquinas
+];
+function glassOverlayURL(){
+  const pts = c => c.map(p=>p[0]+","+p[1]).join(" ");
+  const groups = [0,1,2].map(b =>
+    "<g id='s"+b+"'>" + GLASS_CELLS.filter((_,i)=>GLASS_BANDS[i]===b).map(c=>'<polygon points="'+pts(c)+'"/>').join("") + "</g>");
+  let facets = "";
+  GLASS_CELLS.forEach((c,i)=>{
+    if(GLASS_BANDS[i] === 2 || i % 2) return;
+    const op = (0.02 + ((i*37) % 9) / 260).toFixed(3);
+    facets += '<polygon points="' + pts(c) + '" fill-opacity="' + op + '"/>';
+  });
+  const dust = GLASS_DUST.map(d=>'<circle cx="'+d[0]+'" cy="'+d[1]+'" r="'+d[2]+'" fill="#fff" fill-opacity="'+d[3]+'"/>').join("");
+  let strokes = "";
+  GLASS_BEVEL.forEach((k,b)=>{
+    strokes +=
+      "<use href='#s"+b+"' fill='none' stroke='#00060f' stroke-opacity='"+k.d+"' stroke-width='"+k.do_+"' transform='translate(.8,.8)'/>" +
+      "<use href='#s"+b+"' fill='none' stroke='#ffffff' stroke-opacity='"+k.w+"' stroke-width='"+k.wo+"' transform='translate(-.8,-.8)'/>" +
+      "<use href='#s"+b+"' fill='none' stroke='#02050b' stroke-opacity='"+k.t+"' stroke-width='.45'/>";
+  });
+  const svg =
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300' preserveAspectRatio='none'>" +
+      "<defs>" + groups.join("") +
+      "<radialGradient id='imp'><stop offset='0' stop-color='#fff' stop-opacity='.40'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></radialGradient></defs>" +
+      "<g fill='#dbeeff' stroke='none'>" + facets + "</g>" +
+      strokes +
+      "<circle cx='" + GLASS_IMPACT[0] + "' cy='" + GLASS_IMPACT[1] + "' r='13' fill='url(#imp)'/>" +
+      dust +
+    "</svg>";
+  return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+}
+document.documentElement.style.setProperty("--glass", glassOverlayURL());
+
+/* Versión con refracción real (la portada se desvía en cada esquirla).
+   Solo se usa en el detalle, donde hay una sola portada en pantalla. */
+const REFRACT_N = 46;   // esquirlas con refracción, las más cercanas al golpe
+let refractOrder = null;
+function glassRefractSVG(coverUrl){
+  if(!refractOrder){
+    refractOrder = GLASS_CELLS.map((c,i)=>{
+      let x=0,y=0; c.forEach(p=>{x+=p[0];y+=p[1];});
+      x/=c.length; y/=c.length;
+      return { i, d: Math.hypot(x-GLASS_IMPACT[0], y-GLASS_IMPACT[1]), cx:x, cy:y };
+    }).sort((a,b)=>a.d-b.d);
+  }
+  const safe = esc(coverUrl).replace(/"/g, "&quot;");
+  const img = tf => '<image href="'+safe+'" x="0" y="0" width="300" height="300" preserveAspectRatio="xMidYMid slice"'+(tf?' transform="'+tf+'"':'')+'/>';
+  let defs = "", body = img("");
+  refractOrder.slice(0, REFRACT_N).forEach(({i,cx,cy,d})=>{
+    const c = GLASS_CELLS[i];
+    const pts = c.map(p=>p[0]+","+p[1]).join(" ");
+    const near = Math.max(0, 1 - d/190);
+    const s = (i*2654435761 % 1000)/1000;          // ruido estable por esquirla
+    const k = 2.4 * (0.3 + near*1.2);
+    const dx = (s-.5)*2*k, dy = ((s*7)%1-.5)*2*k, rot = ((s*13)%1-.5)*1.1*(.35+near);
+    defs += '<clipPath id="gc'+i+'"><polygon points="'+pts+'"/></clipPath>';
+    body += '<g clip-path="url(#gc'+i+')">'
+          + img('translate('+cx.toFixed(1)+' '+cy.toFixed(1)+') rotate('+rot.toFixed(2)+') scale(1.01) translate('+(-cx).toFixed(1)+' '+(-cy).toFixed(1)+') translate('+dx.toFixed(2)+' '+dy.toFixed(2)+')')
+          + '</g>';
+  });
+  return '<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">'
+       + '<defs>' + defs + '</defs>' + body
+       + '<image href="' + glassOverlayHref() + '" x="0" y="0" width="300" height="300" preserveAspectRatio="none"/>'
+       + '</svg>';
+}
+let _glassHref = null;
+function glassOverlayHref(){
+  if(_glassHref === null){
+    const u = glassOverlayURL();
+    _glassHref = u.slice(5, -2);   // quita url(" ... ")
+  }
+  return _glassHref;
+}
+
+/* ---------- Datos (con migración) ---------- */
 let db = load();
 function load(){
   try{
@@ -532,6 +786,10 @@ function load(){
         g.year = fixYear(g.year);
         g.yearFinished = fixYear(g.yearFinished);
         g.released ||= "";
+        g.developer ||= "";
+        /* Antes "Jugado" implicaba vidrio roto. Ahora es una marca aparte:
+           se conserva lo que ya se veía y desde aquí se controla a mano. */
+        if(g.broken === undefined) g.broken = g.state === "jugando";
         if(g.note === undefined){
           g.note = Array.isArray(g.comments) && g.comments.length
             ? g.comments.map(c=>c.text).join("\n\n") : "";
@@ -546,33 +804,49 @@ function load(){
 function save(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify(db));
-    pushCloud();   // si hay sesión, sincroniza con la nube (con espera breve)
+  }catch(e){
+    toast("Este navegador se quedó sin espacio. Exporta un respaldo.");
+    console.error(e);
   }
-  catch(e){ toast("No se pudo guardar. Exporta un respaldo."); console.error(e); }
+  pushCloud();   // aunque el guardado local falle, la nube sí debe recibirlo
 }
 
-/* ---------- Navegación (dock) ---------- */
-$$(".dock button[data-view]").forEach(btn => btn.addEventListener("click", ()=>{
-  $$(".dock button[data-view]").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+/* ---------- Navegación ---------- */
+function setView(name){
   $$("section.view").forEach(v=>v.classList.remove("active"));
-  $("#view-" + btn.dataset.view).classList.add("active");
-  $("#filterbar").classList.toggle("hidden", btn.dataset.view === "top10");
-  $("#playedCounter").classList.toggle("hidden", btn.dataset.view !== "played");
+  $("#view-" + name).classList.add("active");
+  $$(".dock button[data-view]").forEach(b=>b.classList.toggle("active", b.dataset.view === name));
+  $("#btnTrophy").classList.toggle("active", name === "top10");
+  $("#filterbar").classList.toggle("hidden", name === "top10" || name === "metrics");
+  $("#playedCounter").classList.toggle("hidden", name !== "played");
   $("#menu").classList.remove("open");
-}));
+  if(name === "top10") renderTop10();
+  if(name === "metrics") renderMetrics();
+}
+$$(".dock button[data-view]").forEach(btn => btn.addEventListener("click", ()=>setView(btn.dataset.view)));
+$("#btnTrophy").addEventListener("click", ()=>{
+  setView($("#view-top10").classList.contains("active") ? "played" : "top10");
+});
 $("#btnMore").addEventListener("click", e=>{ e.stopPropagation(); $("#menu").classList.toggle("open"); });
 document.addEventListener("click", e=>{
   if(!e.target.closest("#menu") && !e.target.closest("#btnMore")) $("#menu").classList.remove("open");
 });
+/* Toque en móvil sobre trofeo y contador: muestra su etiqueta un momento */
+[["#btnTrophy"],["#playedCounter"]].forEach(([sel])=>{
+  const el = $(sel);
+  el.addEventListener("click", ()=>{
+    el.classList.add("show-tip");
+    clearTimeout(el._tip); el._tip = setTimeout(()=>el.classList.remove("show-tip"), 1800);
+  });
+});
 
 /* ============================================================
-   GALERÍAS (Jugados = jugando + finalizado, mezclados)
+   GALERÍAS
    ============================================================ */
 function playedGames(){ return db.games.filter(g => g.state === "jugando" || g.state === "terminado"); }
 function quieroGames(){ return db.games.filter(g => g.state === "quiero"); }
+function finishedGames(){ return db.games.filter(g => g.state === "terminado"); }
 
-/* ---- Filtros superiores ---- */
 $("#filterGenre").addEventListener("change", renderGalleries);
 $("#sortBy").addEventListener("change", renderGalleries);
 function currentSort(){ return $("#sortBy").value; }
@@ -581,6 +855,10 @@ function refreshGenreFilter(){
   const genres = [...new Set(db.games.map(g=>g.genre).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));
   sel.innerHTML = '<option value="">Todos los géneros</option>' +
     genres.map(g=>`<option${g===cur?" selected":""}>${esc(g)}</option>`).join("");
+}
+function refreshDevList(){
+  const devs = [...new Set(db.games.map(g=>g.developer).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));
+  $("#devList").innerHTML = devs.map(d=>`<option>${esc(d)}</option>`).join("");
 }
 function decorate(list){
   const genre = $("#filterGenre").value;
@@ -591,18 +869,24 @@ function decorate(list){
     const key = g => g.released || (g.year ? g.year + "-06-30" : "");
     out.sort((a,b)=> sort === "rel-asc"
       ? (key(a) || "9999").localeCompare(key(b) || "9999")
-      : (key(b) || "0000").localeCompare(key(a) || "0000"));   // joyas: recientes primero
+      : (key(b) || "0000").localeCompare(key(a) || "0000"));
   }
   return out;
 }
 
+/* Observa qué tarjetas están en pantalla: el destello de joya solo gira ahí */
+const seeObs = ("IntersectionObserver" in window)
+  ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle("onscreen", e.isIntersecting)), { rootMargin: "0px" })
+  : null;
+
 function cardEl(g){
   const card = document.createElement("article");
-  card.className = "card" + (g.jewel ? " jewel" : "") + (g.state === "jugando" ? " unfinished" : "");
+  card.className = "card" + (g.jewel ? " jewel" : "") + (g.broken ? " broken" : "");
   card.draggable = currentSort() === "manual";
   card.dataset.id = g.id;
   card.innerHTML = `
-    ${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy" draggable="false">` : `<div class="no-img">Sin portada</div>`}
+    ${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy" decoding="async" draggable="false">` : `<div class="no-img">Sin portada</div>`}
+    ${g.jewel ? `<span class="jewel-ring"><i></i></span>` : ""}
     <div class="badges">
       ${g.metacritic!=null ? `<span class="badge-mc ${mcClass(g.metacritic)}" title="Metacritic">${esc(g.metacritic)}</span>` : ""}
       ${g.personal!=null ? `<span class="badge-me" title="Mi puntaje">${esc(g.personal)}</span>` : ""}
@@ -610,20 +894,24 @@ function cardEl(g){
     <div class="name-ol">${esc(g.name)}</div>`;
   card.addEventListener("click", ()=>{ if(!dragMoved) openDetail(g.id); });
   card.addEventListener("dragstart", e=>{ dragId = g.id; dragMoved = false; card.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; });
-  card.addEventListener("dragend", ()=>{ card.classList.remove("dragging"); $$(".card.drag-over").forEach(c=>c.classList.remove("drag-over")); setTimeout(()=>{ dragMoved = false; }, 50); });
+  card.addEventListener("dragend", ()=>{ card.classList.remove("dragging"); dragId = null; $$(".card.drag-over").forEach(c=>c.classList.remove("drag-over")); setTimeout(()=>{ dragMoved = false; }, 50); });
   card.addEventListener("dragover", e=>{ e.preventDefault(); if(dragId && dragId !== g.id) card.classList.add("drag-over"); });
   card.addEventListener("dragleave", ()=>card.classList.remove("drag-over"));
   card.addEventListener("drop", e=>{
     e.preventDefault(); card.classList.remove("drag-over");
-    if(!dragId || dragId === g.id || currentSort() !== "manual") return;
+    const did = dragId; dragId = null;
+    /* Si lo soltado no salió de una tarjeta (un archivo, una imagen de otra
+       pestaña), no se toca nada ni se bloquean los clics. */
+    if(!did || did === g.id || currentSort() !== "manual" || !db.games.some(x=>x.id===did)){ dragMoved = false; return; }
     dragMoved = true;
-    const from = db.games.findIndex(x=>x.id===dragId);
+    const from = db.games.findIndex(x=>x.id===did);
     const [moved] = db.games.splice(from, 1);
     const to = db.games.findIndex(x=>x.id===g.id);
     const after = from < to + 1;
     db.games.splice(after ? to + 1 : to, 0, moved);
     save(); renderGalleries();
   });
+  if(seeObs && g.jewel) seeObs.observe(card);
   return card;
 }
 let dragId = null, dragMoved = false;
@@ -637,13 +925,17 @@ function renderInto(gridSel, list, emptyMsg){
     grid.appendChild(e);
     return;
   }
-  list.forEach(g => grid.appendChild(cardEl(g)));
+  const frag = document.createDocumentFragment();
+  list.forEach(g => frag.appendChild(cardEl(g)));
+  grid.appendChild(frag);
 }
 function renderGalleries(){
+  if(seeObs) seeObs.disconnect();      // no acumular tarjetas ya descartadas
   refreshGenreFilter();
+  refreshDevList();
   renderInto("#gridPlayed", decorate(playedGames()), "Sin juegos con este filtro. Pulsa + para agregar.");
   renderInto("#gridQuiero", decorate(quieroGames()), "Sin próximos juegos con este filtro.");
-  $("#playedCounter").querySelector(".n").textContent = playedGames().length;
+  $("#playedCounter").querySelector(".n").textContent = finishedGames().length;
 }
 
 /* ============================================================
@@ -653,20 +945,25 @@ let detailId = null;
 function openDetail(id){
   const g = db.games.find(x=>x.id===id); if(!g) return;
   detailId = id;
-  $("#dCover").className = "d-cover" + (g.jewel ? " jewel" : "");
-  $("#dCover").innerHTML = g.cover ? `<img src="${esc(g.cover)}" alt="">` : `<div class="no-img">Sin portada</div>`;
+  const cov = $("#dCover");
+  cov.className = "d-cover" + (g.jewel ? " jewel" : "");
+  if(g.cover && g.broken)      cov.innerHTML = glassRefractSVG(g.cover);
+  else if(g.cover)             cov.innerHTML = `<img src="${esc(g.cover)}" alt="">`;
+  else                         cov.innerHTML = `<div class="no-img">Sin portada</div>`;
   $("#dName").textContent = g.name;
   $("#dGenre").textContent = g.genre || "";
   const rows = [];
   const rel = fmtDate(g.released) || (g.year ?? null);
   if(rel) rows.push(["Salida", esc(rel)]);
+  if(g.developer) rows.push(["Desarrolladora", esc(g.developer)]);
   const stateTxt = g.state === "terminado" ? "Finalizado"
                  : g.state === "jugando" ? "Jugado · sin finalizar" : "Próximo";
   rows.push(["Estado", esc(stateTxt)]);
   if(g.state === "terminado" && g.yearFinished) rows.push(["Finalizado en", esc(g.yearFinished)]);
   if(g.metacritic != null) rows.push(["Metacritic", `<span class="chip mc ${mcClass(g.metacritic)}">${esc(g.metacritic)}</span>`]);
   if(g.personal != null) rows.push(["Mi puntaje", `<span class="chip me">${esc(g.personal)}</span>`]);
-  if(g.jewel) rows.push(["", `<span class="chip jewel-tag">Joya</span>`]);
+  const tags = (g.jewel ? `<span class="chip jewel-tag">Joya</span> ` : "") + (g.broken ? `<span class="chip broken-tag">Roto</span>` : "");
+  if(tags.trim()) rows.push(["", tags]);
   $("#dRows").innerHTML = rows.map(([k,v]) => `<div class="d-row"><span class="k">${k}</span><span>${v}</span></div>`).join("");
   $("#dNote").value = g.note || "";
   resetDelete();
@@ -680,12 +977,12 @@ $("#dSaveNote").addEventListener("click", ()=>{
 });
 $("#dEdit").addEventListener("click", ()=>{
   const g = db.games.find(x=>x.id===detailId); if(!g) return;
-  g.note = $("#dNote").value.trim(); save();   // no perder lo escrito
+  g.note = $("#dNote").value.trim(); save();
   closeOv("ovDetail");
   openForm("edit", detailId);
 });
 
-/* Eliminar en dos pasos (sin diálogos del navegador) */
+/* Eliminar en dos pasos */
 let delTimer = null;
 function resetDelete(){
   const b = $("#dDelete");
@@ -715,10 +1012,12 @@ $$('input[name="fState"]').forEach(r => r.addEventListener("change", ()=>{
 
 function openForm(mode, id){
   formMode = mode; editingId = id || null;
-  const g = mode === "edit" ? db.games.find(x=>x.id===id) : null;
+  let g = mode === "edit" ? db.games.find(x=>x.id===id) : null;
+  if(mode === "edit" && !g){ formMode = "add"; editingId = null; g = null; }
   $("#fTitle").textContent = g ? "Editar juego" : "Agregar juego";
   $("#fName").value = g?.name || "";
   $("#fGenre").value = g?.genre || "";
+  $("#fDev").value = g?.developer || "";
   $("#fReleased").value = g?.released || "";
   $("#fMc").value = g?.metacritic ?? "";
   $("#fMe").value = g?.personal ?? "";
@@ -726,9 +1025,11 @@ function openForm(mode, id){
   $("#fCover").dataset.initial = $("#fCover").value;
   $("#fYearFin").value = g?.yearFinished ?? "";
   $("#fJewel").checked = !!g?.jewel;
+  $("#fBroken").checked = !!g?.broken;
   const st = g?.state || "jugando";
   $$('input[name="fState"]').forEach(r => r.checked = r.value === st);
   $("#fYearFinWrap").style.display = st === "terminado" ? "block" : "none";
+  refreshDevList();
   openOv("ovForm");
   if(!g) $("#fName").focus();
 }
@@ -742,35 +1043,44 @@ $("#fSave").addEventListener("click", ()=>{
   const data = {
     name,
     genre: $("#fGenre").value.trim(),
+    developer: $("#fDev").value.trim(),
     released,
     year: released ? +released.slice(0,4) : null,
     metacritic: $("#fMc").value !== "" ? Math.max(0, Math.min(100, +$("#fMc").value)) : null,
     personal: $("#fMe").value !== "" ? Math.max(0, Math.min(100, +$("#fMe").value)) : null,
     state,
     yearFinished: state === "terminado" && $("#fYearFin").value ? fixYear($("#fYearFin").value) : null,
-    jewel: $("#fJewel").checked
+    jewel: $("#fJewel").checked,
+    broken: $("#fBroken").checked
   };
   const coverUrl = $("#fCover").value.trim();
   const coverChanged = coverUrl !== $("#fCover").dataset.initial;
 
   if(formMode === "edit"){
     const g = db.games.find(x=>x.id===editingId);
+    if(!g){ toast("Ese juego ya no está en la vitrina"); closeOv("ovForm"); return; }
     Object.assign(g, data);
     if(coverChanged){
       g.cover = coverUrl;
-      if(coverUrl) compressCover(coverUrl).then(du=>{ if(du){ g.cover = du; save(); renderAll(); } });
+      if(coverUrl) compressCover(coverUrl).then(du=>applyCover(g.id, du));
     }
     if(g.state !== "terminado") db.top10 = db.top10.map(id => id===g.id ? null : id);
     save(); renderAll(); closeOv("ovForm");
     toast("Cambios guardados");
   }else{
     const g = { id: uid(), cover: coverUrl, note: "", addedAt: Date.now(), ...data };
-    db.games.unshift(g);          // los nuevos entran arriba: de nuevo a viejo
+    db.games.unshift(g);
     save(); renderAll(); closeOv("ovForm");
     toast("Agregado a tu vitrina");
-    if(coverUrl) compressCover(coverUrl).then(du=>{ if(du){ g.cover = du; save(); renderAll(); } });
+    if(coverUrl) compressCover(coverUrl).then(du=>applyCover(g.id, du));
   }
 });
+function applyCover(id, dataUrl){
+  if(!dataUrl) return;
+  const cur = db.games.find(x=>x.id===id);   // db pudo cambiar (nube / importar)
+  if(!cur) return;
+  cur.cover = dataUrl; save(); renderAll();
+}
 
 /* Portada → copia comprimida (base64) para uso sin internet */
 async function compressCover(url){
@@ -782,38 +1092,58 @@ async function compressCover(url){
     const S = 480, r = Math.max(S / bmp.width, S / bmp.height);
     const w = Math.round(bmp.width * r), h = Math.round(bmp.height * r);
     const cv = document.createElement("canvas"); cv.width = S; cv.height = S;
-    cv.getContext("2d").drawImage(bmp, (S - w)/2, (S - h)/2, w, h);  // recorte centrado 1:1
+    cv.getContext("2d").drawImage(bmp, (S - w)/2, (S - h)/2, w, h);
+    bmp.close?.();
     return cv.toDataURL("image/jpeg", 0.8);
   }catch(e){ console.warn("Portada: se usará la URL original.", e); return null; }
 }
 
 /* ============================================================
-   TOP 10
+   TOP 10 — lista vertical
    ============================================================ */
 let pickingSlot = null;
 function renderTop10(){
-  const grid = $("#top10Grid");
-  grid.innerHTML = "";
+  const list = $("#top10List");
+  list.innerHTML = "";
+  const frag = document.createDocumentFragment();
   db.top10.forEach((id, i)=>{
     const g = id ? db.games.find(x=>x.id===id) : null;
-    const slot = document.createElement("div");
-    slot.className = "slot" + (g ? " filled" : "");
-    slot.innerHTML = g
-      ? `<span class="rank">${i+1}</span>
-         ${g.cover ? `<img src="${esc(g.cover)}" alt="">` : ""}
-         <div class="slot-name">${esc(g.name)}</div>
-         <button class="unslot" title="Quitar">✕</button>`
-      : `<span class="rank">${i+1}</span><span class="plus">+</span>`;
-    slot.addEventListener("click", e=>{
-      if(e.target.closest(".unslot")){ db.top10[i] = null; save(); renderTop10(); return; }
+    const row = document.createElement("div");
+    row.className = "t-row" + (g ? "" : " empty");
+    if(g){
+      const meta = [];
+      const rel = fmtDateShort(g.released) || (g.year ?? null);
+      if(rel) meta.push(esc(rel));
+      if(g.developer) meta.push(esc(g.developer));
+      if(g.genre) meta.push(esc(g.genre));
+      row.innerHTML = `
+        <span class="t-rank">${i+1}</span>
+        <div class="t-cover${g.jewel ? " jewel" : ""}${g.broken ? " broken" : ""}">
+          ${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy" decoding="async">` : ""}
+        </div>
+        <div class="t-main">
+          <div class="t-name">${esc(g.name)}</div>
+          <div class="t-meta">${meta.map((m,k)=>(k?'<span class="dot">·</span>':"")+"<span>"+m+"</span>").join("")}</div>
+        </div>
+        <div class="t-scores">
+          ${g.metacritic!=null ? `<span class="chip mc ${mcClass(g.metacritic)}" title="Metacritic">${esc(g.metacritic)}</span>` : ""}
+          ${g.personal!=null ? `<span class="chip me" title="Mi puntaje">${esc(g.personal)}</span>` : ""}
+        </div>
+        <button class="t-x" title="Quitar del top">✕</button>`;
+    }else{
+      row.innerHTML = `<span class="t-rank">${i+1}</span><span class="t-empty-txt">Elegir juego para esta posición</span>`;
+    }
+    row.addEventListener("click", e=>{
+      if(e.target.closest(".t-x")){ db.top10[i] = null; save(); renderTop10(); return; }
       openPicker(i);
     });
-    grid.appendChild(slot);
+    frag.appendChild(row);
   });
+  list.appendChild(frag);
 }
 function openPicker(i){
   pickingSlot = i;
-  const done = db.games.filter(g=>g.state==="terminado");
+  const done = finishedGames();
   $("#pkTitle").textContent = "Posición " + (i+1);
   const list = $("#pkList");
   if(!done.length){
@@ -824,8 +1154,8 @@ function openPicker(i){
       const inSlot = db.top10.indexOf(g.id);
       const b = document.createElement("button");
       b.className = "pick";
-      b.innerHTML = `${g.cover ? `<img src="${esc(g.cover)}" alt="">` : ""}
-        <span><span class="p-name">${esc(g.name)}</span><br><span class="p-meta">${esc(g.genre||"")}${g.year ? " · " + g.year : ""}</span></span>
+      b.innerHTML = `${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy">` : ""}
+        <span><span class="p-name">${esc(g.name)}</span><br><span class="p-meta">${esc(g.developer||g.genre||"")}${g.year ? " · " + g.year : ""}</span></span>
         ${inSlot>-1 ? `<span class="p-rank">en posición ${inSlot+1}</span>` : ""}`;
       b.addEventListener("click", ()=>{
         db.top10 = db.top10.map(id => id===g.id ? null : id);
@@ -836,6 +1166,205 @@ function openPicker(i){
     });
   }
   openOv("ovPicker");
+}
+
+/* ============================================================
+   MÉTRICAS
+   ============================================================ */
+let metricsMode = "year";
+$$("#mSeg button").forEach(b=>b.addEventListener("click", ()=>{
+  metricsMode = b.dataset.m;
+  $$("#mSeg button").forEach(x=>x.classList.toggle("on", x === b));
+  renderMetrics();
+}));
+
+function dataByYear(){
+  const m = new Map();
+  finishedGames().forEach(g=>{ if(g.yearFinished) m.set(g.yearFinished, (m.get(g.yearFinished)||0) + 1); });
+  const ys = [...m.keys()].sort((a,b)=>a-b);
+  if(!ys.length) return [];
+  const out = [];
+  for(let y = ys[0]; y <= ys[ys.length-1]; y++) out.push({ x:String(y), v:m.get(y)||0 });
+  return out;
+}
+function dataByGenre(){
+  const m = new Map();
+  finishedGames().forEach(g=>{
+    const k = (g.genre || "").trim() || "Sin género";
+    m.set(k, (m.get(k)||0) + 1);
+  });
+  return [...m.entries()].map(([x,v])=>({x,v}))
+    .sort((a,b)=> b.v - a.v || a.x.localeCompare(b.x,"es"));
+}
+function niceMax(v){
+  const steps = [2,3,4,5,6,8,10,12,15,20,25,30,40,50,60,80,100];
+  for(const s of steps) if(v <= s) return s;
+  return Math.ceil(v/50)*50;
+}
+function ticksFor(m){
+  const div = m % 4 === 0 ? 4 : m % 3 === 0 ? 3 : m % 5 === 0 ? 5 : 2;
+  return Array.from({length: div+1}, (_,i)=> m*i/div);
+}
+const AX = "rgba(233,199,117,.10)";
+
+function renderMetrics(){
+  const box = $("#metricsBody");
+  const data = metricsMode === "year" ? dataByYear() : dataByGenre();
+  const total = finishedGames().length;
+  const sinAnio = finishedGames().filter(g=>!g.yearFinished).length;
+
+  if(!total || !data.length){
+    box.innerHTML = `<div class="metrics-empty">
+      Todavía no hay nada que medir.<br>
+      Marca un juego como <b>Finalizado</b> y anota el año en que lo terminaste.
+    </div>`;
+    $("#mSub").textContent = "Tu recorrido en números";
+    return;
+  }
+  $("#mSub").textContent = metricsMode === "year"
+    ? "Cuántos juegos terminaste cada año"
+    : "Qué géneros has terminado más";
+
+  box.innerHTML = `
+    <div class="chart-card">
+      <h4>${metricsMode === "year" ? "Terminados por año" : "Terminados por género"}</h4>
+      <div class="chart-total">${total}<small>${total === 1 ? "juego terminado" : "juegos terminados"}${
+        metricsMode === "year" && sinAnio ? ` · ${sinAnio} sin año anotado` : ""}</small></div>
+      <div class="chart-wrap" id="chartWrap">
+        <div class="chart-tip" id="chartTip"></div>
+      </div>
+    </div>`;
+  drawChart(data);
+}
+
+/* Observa el contenedor fijo (#metricsBody), NO el que se vuelve a crear en cada
+   dibujo, y solo redibuja si el ancho cambió de verdad. Observar el propio
+   #chartWrap provocaba un bucle infinito de re-render. */
+let roDebounce = null, lastChartW = 0, roReady = false;
+const chartRO = ("ResizeObserver" in window) ? new ResizeObserver(entries=>{
+  const w = Math.round(entries[0].contentRect.width);
+  if(Math.abs(w - lastChartW) < 8) return;
+  clearTimeout(roDebounce);
+  roDebounce = setTimeout(()=>{ if($("#view-metrics").classList.contains("active")) renderMetrics(); }, 180);
+}) : null;
+
+function drawChart(data){
+  const wrap = $("#chartWrap");
+  const W = Math.max(260, Math.round(wrap.clientWidth));
+  lastChartW = W;
+  const svg = metricsMode === "year" ? lineChart(data, W) : barChart(data, W);
+  wrap.insertAdjacentHTML("afterbegin", svg);
+  hookTip(data, W);
+  if(chartRO && !roReady){ roReady = true; chartRO.observe($("#metricsBody")); }
+}
+
+function lineChart(data, W){
+  const small = W < 520;
+  const H = small ? 210 : 264;
+  const P = { l: 30, r: 16, t: 16, b: 28 };
+  const yMax = niceMax(Math.max(1, ...data.map(d=>d.v)));
+  const iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const X = i => data.length === 1 ? P.l + iw/2 : P.l + i*iw/(data.length-1);
+  const Y = v => P.t + ih - (v/yMax)*ih;
+  const pts = data.map((d,i)=>[X(i), Y(d.v)]);
+
+  let g = "";
+  ticksFor(yMax).forEach(t=>{
+    g += `<line x1="${P.l}" y1="${Y(t).toFixed(1)}" x2="${W-P.r}" y2="${Y(t).toFixed(1)}" stroke="${AX}" stroke-width="1"/>`
+      +  `<text x="${P.l-8}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end" fill="#b39d7e" font-size="10.5">${t}</text>`;
+  });
+  const step = Math.ceil(data.length / Math.max(2, Math.floor(iw/46)));
+  data.forEach((d,i)=>{
+    if(i % step && i !== data.length-1) return;
+    g += `<text x="${X(i).toFixed(1)}" y="${H-9}" text-anchor="middle" fill="#b39d7e" font-size="10.5">${esc(d.x)}</text>`;
+  });
+
+  const line = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const areaD = data.length === 1 ? "" :
+    line + ` L${pts[pts.length-1][0].toFixed(1)} ${P.t+ih} L${pts[0][0].toFixed(1)} ${P.t+ih} Z`;
+
+  const best = data.reduce((a,b,i)=> b.v > data[a].v ? i : a, 0);
+  let marks = "";
+  pts.forEach((p,i)=>{
+    marks += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.6" fill="#e9c775" stroke="#1a1006" stroke-width="2"/>`;
+  });
+  const bl = data[best].v > 0
+    ? `<text x="${X(best).toFixed(1)}" y="${(Y(data[best].v)-13).toFixed(1)}" text-anchor="middle" fill="#f2e7d5" font-size="11.5" font-weight="700">${data[best].v}</text>`
+    : "";
+
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Juegos terminados por año">
+    <defs><linearGradient id="ar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9c775" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#e9c775" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${g}
+    ${areaD ? `<path d="${areaD}" fill="url(#ar)"/>` : ""}
+    <path d="${line}" fill="none" stroke="#e9c775" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${marks}${bl}
+    <line id="cross" x1="0" y1="${P.t}" x2="0" y2="${P.t+ih}" stroke="#e9c775" stroke-opacity=".38" stroke-width="1" style="display:none"/>
+  </svg>`;
+}
+
+function barChart(data, W){
+  const small = W < 520;
+  const labelW = Math.min(small ? 96 : 140, Math.round(W*0.34));
+  const P = { l: labelW, r: 34, t: 6, b: 6 };
+  const rowH = 26, gap = 10;
+  const H = P.t + P.b + data.length*rowH + (data.length-1)*gap;
+  const iw = W - P.l - P.r;
+  const vMax = Math.max(1, ...data.map(d=>d.v));
+  let g = "";
+  data.forEach((d,i)=>{
+    const y = P.t + i*(rowH+gap);
+    const w = Math.max(3, (d.v/vMax)*iw);
+    const r = Math.min(4, w/2);
+    g += `<text x="${labelW-12}" y="${y+rowH/2+4}" text-anchor="end" fill="#f2e7d5" font-size="${small?11:12}">${esc(d.x.length>18?d.x.slice(0,17)+"…":d.x)}</text>`
+      +  `<rect x="${labelW}" y="${y}" width="${iw}" height="${rowH}" rx="6" fill="rgba(233,199,117,.05)"/>`
+      +  `<path d="M${labelW} ${y} H${labelW+w-r} a${r} ${r} 0 0 1 ${r} ${r} V${y+rowH-r} a${r} ${r} 0 0 1 ${-r} ${r} H${labelW} Z" fill="url(#bg1)"/>`
+      +  `<text x="${labelW+w+9}" y="${y+rowH/2+4}" fill="#f2e7d5" font-size="11.5" font-weight="700">${d.v}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Juegos terminados por género">
+    <defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#cf9d45"/><stop offset="1" stop-color="#e9c775"/>
+    </linearGradient></defs>
+    ${g}
+  </svg>`;
+}
+
+function hookTip(data, W){
+  const wrap = $("#chartWrap"), tip = $("#chartTip"), svg = wrap.querySelector("svg");
+  if(!svg) return;
+  const vb = svg.viewBox.baseVal, scale = () => wrap.clientWidth / vb.width;
+  const hide = ()=>{ tip.classList.remove("on"); const c = svg.querySelector("#cross"); if(c) c.style.display = "none"; };
+
+  if(metricsMode === "year"){
+    const P = { l:30, r:16 };
+    const iw = vb.width - P.l - P.r;
+    svg.addEventListener("pointermove", e=>{
+      const rect = wrap.getBoundingClientRect();
+      const ux = (e.clientX - rect.left) / scale();
+      let i = data.length === 1 ? 0 : Math.round((ux - P.l) / (iw/(data.length-1)));
+      i = Math.max(0, Math.min(data.length-1, i));
+      const x = data.length === 1 ? P.l + iw/2 : P.l + i*iw/(data.length-1);
+      const c = svg.querySelector("#cross");
+      if(c){ c.setAttribute("x1", x); c.setAttribute("x2", x); c.style.display = "block"; }
+      tip.innerHTML = `${esc(data[i].x)} · <b>${data[i].v}</b> ${data[i].v === 1 ? "juego" : "juegos"}`;
+      tip.style.left = (x*scale()) + "px";
+      tip.style.top = (vb.height*0.34*scale()) + "px";
+      tip.classList.add("on");
+    });
+  }else{
+    svg.addEventListener("pointermove", e=>{
+      const rect = wrap.getBoundingClientRect();
+      const uy = (e.clientY - rect.top) / scale();
+      const i = Math.max(0, Math.min(data.length-1, Math.floor((uy - 6) / 36)));
+      tip.innerHTML = `${esc(data[i].x)} · <b>${data[i].v}</b> ${data[i].v === 1 ? "juego" : "juegos"}`;
+      tip.style.left = Math.min(wrap.clientWidth - 20, Math.max(60, e.clientX - rect.left)) + "px";
+      tip.style.top = ((6 + i*36 + 13)*scale()) + "px";
+      tip.classList.add("on");
+    });
+  }
+  svg.addEventListener("pointerleave", hide);
 }
 
 /* ============================================================
@@ -871,8 +1400,7 @@ $("#importFile").addEventListener("change", e=>{
 });
 
 /* ============================================================
-   NUBE — Supabase (cuentas y sincronización)
-   Pega aquí los dos valores de tu proyecto (Project Settings → API)
+   NUBE — Supabase
    ============================================================ */
 const SUPABASE_URL = "https://wubsqbfpqiseddjmfxyv.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_pC9-5EqsSIrpJqITyXmvfQ_gh2f2W4_";
@@ -892,8 +1420,6 @@ function setCloudUser(u){
   updateGate();
   if(u && u.id !== prev) pullCloud();
 }
-/* Al abrir: si hay Supabase configurado y no hay sesión, exige entrar.
-   La sesión se recuerda sola en el navegador; solo vuelve a pedirla tras Cerrar sesión. */
 function updateGate(){
   const ov = $("#ovAuth");
   if(sb && !cloudUser){
@@ -917,7 +1443,7 @@ async function pullCloud(){
       db = load(); renderAll();
       toast("Colección sincronizada");
     }else{
-      pushCloud();   // primera vez: sube lo local
+      pushCloud();
     }
   }catch(e){ console.error(e); toast("No se pudo sincronizar ahora"); }
 }
@@ -967,8 +1493,21 @@ if("serviceWorker" in navigator && location.protocol === "https:"){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});
 }
 
+/* ---------- Ahorro: con la pestaña oculta nada se anima ---------- */
+function updatePaused(){
+  document.body.classList.toggle("paused", document.hidden || !document.hasFocus());
+}
+document.addEventListener("visibilitychange", updatePaused);
+window.addEventListener("blur", updatePaused);
+window.addEventListener("focus", updatePaused);
+updatePaused();
+
 /* ---------- Arranque ---------- */
-function renderAll(){ renderGalleries(); renderTop10(); }
+function renderAll(){
+  renderGalleries();
+  if($("#view-top10").classList.contains("active")) renderTop10();
+  if($("#view-metrics").classList.contains("active")) renderMetrics();
+}
 renderAll();
 </script>
 </body>
